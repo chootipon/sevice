@@ -8,7 +8,21 @@ app.use(express.json());
 // ** การแก้ไขที่สำคัญ: ลบการเรียกใช้ serviceAccountKey.json โดยตรง **
 // ** Firebase Admin SDK จะโหลดข้อมูลรับรองจาก GOOGLE_APPLICATION_CREDENTIALS environment variable โดยอัตโนมัติ **
 // ***************************************************************
-admin.initializeApp();
+
+// ***************************************************************
+// ** เพิ่ม try-catch block เพื่อดักจับ Error ระหว่างการเริ่มต้น Firebase Admin SDK **
+// ***************************************************************
+try {
+  admin.initializeApp(); // ถ้ามีปัญหา อาจโยน Error ที่นี่
+  console.log('Firebase Admin SDK initialized successfully.'); // เพิ่ม log นี้เมื่อสำเร็จ
+} catch (error) {
+  // แสดง Error code และรายละเอียดเพื่อการ Debug ที่ดีขึ้น
+  console.error('ERROR: Failed to initialize Firebase Admin SDK:', error.code, error.details || error.message);
+  // หากการเชื่อมต่อ Firebase สำคัญมาก คุณอาจพิจารณาให้แอปพลิเคชันหยุดทำงานที่นี่
+  // process.exit(1); 
+  // แต่สำหรับการ Debug ครั้งแรก ปล่อยให้มันรันต่อไปเพื่อดูว่ามี Error อื่นๆ หรือไม่
+}
+
 
 const db = admin.firestore();
 
@@ -300,7 +314,7 @@ app.get('/', (req, res) => {
   res.send('Hello from your LINE Bot backend! Server is running.');
 });
 
-const PORT = process.env.PORT || 3000; // กำหนดค่า default port หากไม่ถูกตั้งใน env
+const PORT = process.env.PORT || 10000; // แก้เป็น 10000 เพื่อให้ Render ตรวจพบ
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });

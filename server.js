@@ -6,14 +6,21 @@ app.use(express.json());
 
 // ***************************************************************
 // ** การแก้ไขที่สำคัญ: ลบการเรียกใช้ serviceAccountKey.json โดยตรง **
-// ** Firebase Admin SDK จะโหลดข้อมูลรับรองจาก GOOGLE_APPLICATION_CREDENTIALS environment variable โดยอัตโนมัติ **
+// ** Firebase Admin SDK จะโหลดข้อมูลรับรองจาก GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable โดยอัตโนมัติ (หากตั้งค่า) **
+// ** หรือใช้ Project ID โดยตรงในโค้ดตามที่แก้ไขด้านล่าง **
 // ***************************************************************
 
 // ***************************************************************
 // ** เพิ่ม try-catch block เพื่อดักจับ Error ระหว่างการเริ่มต้น Firebase Admin SDK **
 // ***************************************************************
 try {
-  admin.initializeApp(); // ถ้ามีปัญหา อาจโยน Error ที่นี่
+  // ***************************************************************
+  // ** แก้ไขที่นี่: ระบุ Project ID ของคุณโดยตรง **
+  // ** ให้ใช้ Project ID ของ Firebase Project ของคุณจริงๆ (ตัวอย่าง: 'baking-course-register') **
+  // ***************************************************************
+  admin.initializeApp({
+    projectId: 'baking-course-register' // <--- **แทนที่ด้วย Project ID จริงๆ ของคุณ**
+  });
   console.log('Firebase Admin SDK initialized successfully.'); // เพิ่ม log นี้เมื่อสำเร็จ
 } catch (error) {
   // แสดง Error code และรายละเอียดเพื่อการ Debug ที่ดีขึ้น
@@ -95,7 +102,7 @@ async function handleEvent(event) {
     if (courses.length === 0) {
       await sendTextReply(replyToken, 'ขณะนี้ยังไม่มีคอร์สที่เปิดสอนค่ะ');
     } else {
-      await sendCoursesFlexInChunks(replyToken, courses);
+      await sendCoursesFlexInChunks(replyLoken, courses);
     }
     return;
   }

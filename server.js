@@ -5,28 +5,38 @@ const app = express();
 app.use(express.json());
 
 // **********************************************************************************
-// ** การเริ่มต้น Firebase Admin SDK สำหรับ Render (ใช้ Environment Variables) **
+// ** การแก้ไขที่สำคัญที่สุด: ใช้ credential โดยตรงจาก Environment Variable **
 // **********************************************************************************
+let serviceAccount;
 try {
-  // Option 1: ระบุ Project ID โดยตรง (แนะนำให้ใช้ตอนนี้เพื่อแก้ปัญหาได้เร็วที่สุด)
-  // ใช้ Project ID ของคุณ 'baking-course-register' ที่คุณยืนยันว่าถูกต้อง
-  admin.initializeApp({
-    projectId: 'baking-course-register' 
-  });
-  
-  // Option 2: (ถ้า Option 1 ใช้ได้แล้ว) ให้ลองคอมเมนต์ projectId ออก
-  // แล้วไปตั้งค่า GOOGLE_APPLICATION_CREDENTIALS_JSON บน Render แทน
-  // admin.initializeApp(); 
+  // พยายามแปลง GOOGLE_APPLICATION_CREDENTIALS_JSON จาก Environment Variable ให้เป็น JSON object
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+    serviceAccount = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+    console.log('Service account JSON loaded from environment variable.');
+  } else {
+    console.error('ERROR: GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable is not set.');
+    // หากไม่มี env var นี้ ให้ throw error เพื่อหยุดแอป
+    throw new Error('Firebase credentials environment variable is missing.');
+  }
 
-  console.log('Firebase Admin SDK initialized successfully.');
+  // เริ่มต้น Firebase Admin SDK ด้วย credential ที่ได้มาโดยตรง
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    // projectId ไม่จำเป็นต้องระบุตรงนี้ ถ้ามีอยู่ใน serviceAccount แล้ว
+    // แต่ถ้ายังติดปัญหา ก็ใส่ไปเลยก็ได้เพื่อความชัวร์
+    projectId: serviceAccount.project_id // ดึง projectId จาก JSON credential โดยตรง
+  });
+
+  console.log('Firebase Admin SDK initialized successfully with explicit credentials.');
 } catch (error) {
-  // หากยังเกิด Error ในขั้นตอนนี้ จะเห็นรายละเอียดใน Render Logs
-  console.error('ERROR: Failed to initialize Firebase Admin SDK:', error.code, error.details || error.message);
-  // หาก Firebase Init ไม่สำเร็จ อาจพิจารณาให้แอปพลิเคชันหยุดทำงาน เพื่อไม่ให้รันต่อโดยไม่มีฐานข้อมูล
-  // process.exit(1); 
+  console.error('ERROR: Failed to initialize Firebase Admin SDK:', error.message);
+  // ใน Production ควรให้แอปหยุดทำงานถ้า Firebase init ล้มเหลว
+  process.exit(1);
 }
 
 const db = admin.firestore();
+
+// ... ส่วนที่เหลือของโค้ดของคุณเหมือนเดิม ...
 
 // LINE_TOKEN ควรถูกดึงมาจาก Environment Variable เพื่อความปลอดภัย
 const LINE_TOKEN = process.env.LINE_TOKEN;

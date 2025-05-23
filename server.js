@@ -14,10 +14,11 @@ app.use(express.json());
 // ** เพิ่ม try-catch block เพื่อดักจับ Error ระหว่างการเริ่มต้น Firebase Admin SDK **
 // ***************************************************************
 try {
-  // ***************************************************************
+  // **************************************************************************
   // ** แก้ไขที่นี่: ระบุ Project ID ของคุณโดยตรง **
-  // ** ให้ใช้ Project ID ของ Firebase Project ของคุณจริงๆ (ตัวอย่าง: 'baking-course-register') **
-  // ***************************************************************
+  // ** ผมใช้ 'baking-course-register' ตามที่คุณเคยให้ใน Log **
+  // ** หาก Project ID ของคุณไม่ใช่ 'baking-course-register' โปรดเปลี่ยนให้ถูกต้อง **
+  // **************************************************************************
   admin.initializeApp({
     projectId: 'baking-course-register' // <--- **แทนที่ด้วย Project ID จริงๆ ของคุณ**
   });
@@ -102,7 +103,7 @@ async function handleEvent(event) {
     if (courses.length === 0) {
       await sendTextReply(replyToken, 'ขณะนี้ยังไม่มีคอร์สที่เปิดสอนค่ะ');
     } else {
-      await sendCoursesFlexInChunks(replyLoken, courses);
+      await sendCoursesFlexInChunks(replyToken, courses);
     }
     return;
   }

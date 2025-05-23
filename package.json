@@ -1,0 +1,16 @@
+{
+  "name": "firestore-api-proxy",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "firebase-admin": "^11.10.1",
+    "axios": "^1.6.8"
+  }
+}

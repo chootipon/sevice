@@ -16,7 +16,7 @@ app.use(express.json());
 try {
   // **************************************************************************
   // ** แก้ไขที่นี่: ระบุ Project ID ของคุณโดยตรง **
-  // ** ผมใช้ 'baking-course-register' ตามที่คุณเคยให้ใน Log **
+  // ** ผมใช้ 'baking-course-register' ตามที่คุณเคยให้ใน Log ก่อนหน้านี้ **
   // ** หาก Project ID ของคุณไม่ใช่ 'baking-course-register' โปรดเปลี่ยนให้ถูกต้อง **
   // **************************************************************************
   admin.initializeApp({
@@ -27,7 +27,7 @@ try {
   // แสดง Error code และรายละเอียดเพื่อการ Debug ที่ดีขึ้น
   console.error('ERROR: Failed to initialize Firebase Admin SDK:', error.code, error.details || error.message);
   // หากการเชื่อมต่อ Firebase สำคัญมาก คุณอาจพิจารณาให้แอปพลิเคชันหยุดทำงานที่นี่
-  // process.exit(1); 
+  // process.exit(1);
   // แต่สำหรับการ Debug ครั้งแรก ปล่อยให้มันรันต่อไปเพื่อดูว่ามี Error อื่นๆ หรือไม่
 }
 

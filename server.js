@@ -4,45 +4,37 @@ const axios = require('axios');
 const app = express();
 app.use(express.json());
 
-// ***************************************************************
-// ** การแก้ไขที่สำคัญ: ลบการเรียกใช้ serviceAccountKey.json โดยตรง **
-// ** Firebase Admin SDK จะโหลดข้อมูลรับรองจาก GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable โดยอัตโนมัติ (หากตั้งค่า) **
-// ** หรือใช้ Project ID โดยตรงในโค้ดตามที่แก้ไขด้านล่าง **
-// ***************************************************************
-
-// ***************************************************************
-// ** เพิ่ม try-catch block เพื่อดักจับ Error ระหว่างการเริ่มต้น Firebase Admin SDK **
-// ***************************************************************
+// **********************************************************************************
+// ** การเริ่มต้น Firebase Admin SDK สำหรับ Render (ใช้ Environment Variables) **
+// **********************************************************************************
 try {
-  // **************************************************************************
-  // ** แก้ไขที่นี่: ระบุ Project ID ของคุณโดยตรง **
-  // ** ผมใช้ 'baking-course-register' ตามที่คุณเคยให้ใน Log ก่อนหน้านี้ **
-  // ** หาก Project ID ของคุณไม่ใช่ 'baking-course-register' โปรดเปลี่ยนให้ถูกต้อง **
-  // **************************************************************************
+  // Option 1: ระบุ Project ID โดยตรง (แนะนำให้ใช้ตอนนี้เพื่อแก้ปัญหาได้เร็วที่สุด)
+  // ใช้ Project ID ของคุณ 'baking-course-register' ที่คุณยืนยันว่าถูกต้อง
   admin.initializeApp({
-    projectId: 'baking-course-register' // <--- **แทนที่ด้วย Project ID จริงๆ ของคุณ**
+    projectId: 'baking-course-register' 
   });
-  console.log('Firebase Admin SDK initialized successfully.'); // เพิ่ม log นี้เมื่อสำเร็จ
-} catch (error) {
-  // แสดง Error code และรายละเอียดเพื่อการ Debug ที่ดีขึ้น
-  console.error('ERROR: Failed to initialize Firebase Admin SDK:', error.code, error.details || error.message);
-  // หากการเชื่อมต่อ Firebase สำคัญมาก คุณอาจพิจารณาให้แอปพลิเคชันหยุดทำงานที่นี่
-  // process.exit(1);
-  // แต่สำหรับการ Debug ครั้งแรก ปล่อยให้มันรันต่อไปเพื่อดูว่ามี Error อื่นๆ หรือไม่
-}
+  
+  // Option 2: (ถ้า Option 1 ใช้ได้แล้ว) ให้ลองคอมเมนต์ projectId ออก
+  // แล้วไปตั้งค่า GOOGLE_APPLICATION_CREDENTIALS_JSON บน Render แทน
+  // admin.initializeApp(); 
 
+  console.log('Firebase Admin SDK initialized successfully.');
+} catch (error) {
+  // หากยังเกิด Error ในขั้นตอนนี้ จะเห็นรายละเอียดใน Render Logs
+  console.error('ERROR: Failed to initialize Firebase Admin SDK:', error.code, error.details || error.message);
+  // หาก Firebase Init ไม่สำเร็จ อาจพิจารณาให้แอปพลิเคชันหยุดทำงาน เพื่อไม่ให้รันต่อโดยไม่มีฐานข้อมูล
+  // process.exit(1); 
+}
 
 const db = admin.firestore();
 
 // LINE_TOKEN ควรถูกดึงมาจาก Environment Variable เพื่อความปลอดภัย
-const LINE_TOKEN = process.env.LINE_TOKEN; 
+const LINE_TOKEN = process.env.LINE_TOKEN;
 
-// ตรวจสอบว่า LINE_TOKEN มีค่าหรือไม่ (สำหรับการทำงานใน Production)
+// ตรวจสอบว่า LINE_TOKEN มีค่าหรือไม่
 if (!LINE_TOKEN) {
   console.error('LINE_TOKEN environment variable is not set. LINE messages will not work correctly.');
-  // ใน Production คุณอาจจะต้องการให้แอปพลิเคชันหยุดทำงานหรือแจ้งเตือนเมื่อไม่มี LINE_TOKEN
 }
-
 
 const FEATURES = {
   THEMED_CARDS: true,
@@ -55,12 +47,21 @@ const FEATURES = {
 async function getOpenCourses() {
   const courses = [];
   try {
+    console.log('Attempting to query Firestore for "courses" collection.');
     const snapshot = await db.collection('courses').get();
-    console.log('Firestore snapshot size:', snapshot.size);
+    console.log('Firestore snapshot size:', snapshot.size); // **ดู Log นี้บน Render ว่าได้ 0 หรือมีจำนวน**
+
+    if (snapshot.empty) {
+      console.log('No documents found in "courses" collection or no active documents after filter.');
+    }
+
     snapshot.forEach(doc => {
       const data = doc.data();
+      // Debug: Log all documents found and their active status
+      console.log(`Processing document ID: ${doc.id}, Active status: ${data.active}, Title: ${data.title}`); 
+
       // เช็ค field active เป็น true เท่านั้น
-      if (data.active === true) {
+      if (data.active === true) { // ตรวจสอบว่าเป็น boolean true
         courses.push({
           id: doc.id,
           title: data.title || '',
@@ -68,15 +69,14 @@ async function getOpenCourses() {
           image: data.image || '',
           link: data.link || '',
           price: data.price || '',
-          status: data.status || '',
+          status: data.status || '', // ถ้าไม่มี status ใน Firestore ก็จะเป็น ''
           category: data.category || '',
           keyword: data.keyword || ''
         });
       }
     });
-    console.log('Filtered courses:', courses.length);
+    console.log('Filtered active courses:', courses.length); // **ดู Log นี้บน Render ว่าได้ 0 หรือมีจำนวน**
   } catch (error) {
-    // แสดง Error code และรายละเอียดเพื่อการ Debug ที่ดีขึ้น
     console.error('Error fetching courses from Firestore:', error.code, error.details || error.message);
   }
   return courses;
@@ -87,7 +87,11 @@ async function getOpenCourses() {
 app.post('/webhook', (req, res) => {
   res.status(200).send('OK');
   const events = req.body.events;
-  if (!events || events.length === 0) return;
+  if (!events || events.length === 0) {
+    console.log('No events received in webhook.'); // Debugging line
+    return;
+  }
+  console.log('Received LINE webhook events:', JSON.stringify(events, null, 2)); // Debugging line
   events.forEach(event => handleEvent(event).catch(console.error));
 });
 
@@ -95,43 +99,51 @@ app.post('/webhook', (req, res) => {
 async function handleEvent(event) {
   const userMessage = event.message?.text?.toLowerCase();
   const replyToken = event.replyToken;
-  if (!userMessage || !replyToken) return;
+  console.log(`Handling event from user. Message: "${userMessage}", ReplyToken: ${replyToken}`); // Debugging line
 
-  const courses = await getOpenCourses();
+  if (!userMessage || !replyToken) {
+    console.warn('User message or reply token is missing.');
+    return;
+  }
 
+  const courses = await getOpenCourses(); // ดึงคอร์สจาก Firestore
+
+  // เงื่อนไข 'ดูคอร์สทั้งหมด'
   if (userMessage.includes('ดูคอร์สทั้งหมด')) {
     if (courses.length === 0) {
       await sendTextReply(replyToken, 'ขณะนี้ยังไม่มีคอร์สที่เปิดสอนค่ะ');
     } else {
       await sendCoursesFlexInChunks(replyToken, courses);
     }
-    return;
+    return; // สำคัญ: ต้อง return เพื่อไม่ให้ไปตรวจสอบเงื่อนไขอื่น
   }
 
   // ปรับปรุงการค้นหาหมวดหมู่ให้ยืดหยุ่นขึ้น
   if (FEATURES.CATEGORY_SEARCH && userMessage.startsWith('หมวดหมู่')) {
     const parts = userMessage.split(' ');
     if (parts.length > 1) {
-      const category = parts.slice(1).join(' ').trim(); // รวมคำที่เหลือเป็นหมวดหมู่
+      const category = parts.slice(1).join(' ').trim().toLowerCase(); // ทำให้เป็น lowercase
       const filtered = courses.filter(c => (c.category || '').toLowerCase().includes(category));
       if (filtered.length > 0) {
         await sendCoursesFlexInChunks(replyToken, filtered);
       } else {
-        await sendTextReply(replyToken, `ไม่พบคอร์สในหมวดหมู่ "${category}"`);
+        await sendTextReply(replyToken, `ไม่พบคอร์สในหมวดหมู่ "${category}" ค่ะ`);
       }
     } else {
         await sendTextReply(replyToken, 'กรุณาระบุหมวดหมู่ที่ต้องการค้นหา เช่น "หมวดหมู่ เบเกอรี่"');
     }
-    return;
+    return; // สำคัญ: ต้อง return
   }
   
-  // ใช้ fuzzy search ถ้าเปิดใช้งาน FEATURE นี้
+  // ใช้ fuzzy search ถ้าเปิดใช้งาน FEATURE นี้ (สำหรับ keyword และ title)
   let matchedCourses = [];
   if (FEATURES.FUZZY_SEARCH) {
-    matchedCourses = courses.filter(c =>
-      (c.keyword || '').split(',').some(k => fuzzyMatch(userMessage, k)) ||
-      fuzzyMatch(userMessage, c.title.toLowerCase())
-    );
+    matchedCourses = courses.filter(c => {
+      const keywordMatches = (c.keyword || '').split(',').some(k => fuzzyMatch(userMessage, k));
+      const titleMatches = fuzzyMatch(userMessage, c.title.toLowerCase());
+      console.log(`Matching for "${userMessage}" - Course: "${c.title}" (Keyword: ${c.keyword}, Title: ${c.title.toLowerCase()}) => Keyword Match: ${keywordMatches}, Title Match: ${titleMatches}`); // Debugging match
+      return keywordMatches || titleMatches;
+    });
   } else {
     // Fallback to exact match if fuzzy search is disabled
     matchedCourses = courses.filter(c =>
@@ -140,6 +152,7 @@ async function handleEvent(event) {
     );
   }
   
+  console.log('Number of matched courses:', matchedCourses.length); // Debugging line
 
   if (matchedCourses.length > 0) {
     await sendCoursesFlexInChunks(replyToken, matchedCourses);
@@ -157,7 +170,9 @@ async function handleEvent(event) {
 function fuzzyMatch(input, target) {
   const i = input.toLowerCase().replace(/\s+/g, '');
   const t = target.toLowerCase().replace(/\s+/g, '');
-  return t.includes(i) || i.includes(t);
+  const isMatch = t.includes(i) || i.includes(t);
+  console.log(`Fuzzy Match: Input "${input}" vs Target "${target}" => Result: ${isMatch}`); // Debugging fuzzy match
+  return isMatch;
 }
 
 // ส่ง Flex เป็นหลายรอบ (ถ้าเกิน 12)
@@ -166,6 +181,7 @@ async function sendCoursesFlexInChunks(replyToken, courses) {
   for (let i = 0; i < courses.length; i += 12) {
     chunks.push(courses.slice(i, i + 12));
   }
+  console.log(`Sending courses in ${chunks.length} chunks. Total courses: ${courses.length}`); // Debugging line
 
   for (let i = 0; i < chunks.length; i++) {
     const message = {
@@ -261,7 +277,7 @@ function createFlexCard(course) {
 // ฟังก์ชันส่งข้อความแบบ reply
 function replyMessage(replyToken, message) {
   if (!LINE_TOKEN) {
-    console.warn('LINE_TOKEN is not set. Cannot send reply message.');
+    console.warn('LINE_TOKEN is not set. Cannot send reply message. Check Render Environment Variables.');
     return Promise.resolve(); // ป้องกันไม่ให้แอปพลิเคชัน Crash
   }
   return axios.post(

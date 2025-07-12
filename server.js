@@ -311,7 +311,7 @@ async function sendReviewFlex(replyToken) {
       hero: {
         type: 'image',
         // **สำคัญ:** เปลี่ยนเป็น URL รูปภาพตัวอย่างของวิดีโอของคุณ
-        url: 'https://i.postimg.cc/W4kMZcB6/Screenshot-2025-07-12-113404.png',
+        url: 'https://i.postimg.cc/RhsRRQXc/Screenshot-2025-07-12-113404.png',
         size: 'full',
         aspectRatio: '20:13',
         aspectMode: 'cover',

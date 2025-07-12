@@ -108,6 +108,16 @@ app.post('/webhook', (req, res) => {
 
 // จัดการแต่ละ event
 async function handleEvent(event) {
+  // ******** การเปลี่ยนแปลงอยู่ตรงนี้ ********
+  // ตรวจสอบ Event การเพิ่มเพื่อน (Follow Event) ก่อนเป็นอันดับแรก
+  if (event.type === 'follow') {
+    console.log(`New user followed: ${event.source.userId}`);
+    // ส่งข้อความต้อนรับ/รีวิวอัตโนมัติ
+    await sendReviewFlex(event.replyToken);
+    return; // จบการทำงานสำหรับ Event นี้
+  }
+
+  // ถ้าไม่ใช่ Follow Event ให้ทำงานกับ Message Event ตามปกติ
   const userMessage = event.message?.text?.toLowerCase();
   const replyToken = event.replyToken;
   console.log(`Handling event from user. Message: "${userMessage}", ReplyToken: ${replyToken}`); // Debugging line
@@ -116,10 +126,15 @@ async function handleEvent(event) {
     console.warn('User message or reply token is missing.');
     return;
   }
+  
+  // ******** NEW FEATURE: รีวิววิดีโอ ********
+  if (userMessage.includes('รีวิว') || userMessage.includes('vdo')) {
+    await sendReviewFlex(replyToken);
+    return; // จบการทำงานสำหรับเงื่อนไขนี้
+  }
 
   const courses = await getOpenCourses(); // ดึงคอร์สจาก Firestore
 
-  // ******** การเปลี่ยนแปลงอยู่ตรงนี้ ********
   // เงื่อนไข 'ดูคอร์สทั้งหมด' หรือ 'สนใจ'
   if (userMessage.includes('ดูคอร์สทั้งหมด') || userMessage.includes('สนใจ')) {
     if (courses.length === 0) {
@@ -171,7 +186,7 @@ async function handleEvent(event) {
   } else {
     // ใช้ quick reply ถ้าเปิดใช้งาน FEATURE นี้
     if (FEATURES.QUICK_REPLY) {
-      await sendTextWithQuickReply(replyToken, 'กรุณาเลือกดูคอร์สจากเมนูด้านล่างนะคะ 👇');
+      await sendTextWithQuickReply(replyToken, 'ไม่พบคอร์สที่เกี่ยวข้อง ลองเลือกจากเมนูด้านล่างนะคะ 👇');
     } else {
       await sendTextReply(replyToken, 'ไม่พบคอร์สที่เกี่ยวข้องค่ะ');
     }
@@ -195,8 +210,6 @@ async function sendCoursesFlexInChunks(replyToken, courses) {
   }
   console.log(`Sending courses in ${chunks.length} chunks. Total courses: ${courses.length}`); // Debugging line
 
-  // ใช้ Promise.all เพื่อส่งข้อความทั้งหมดพร้อมกัน (แต่ LINE API อาจมี rate limit)
-  // การส่งทีละอันพร้อม delay จะปลอดภัยกว่า
   for (let i = 0; i < chunks.length; i++) {
     const message = {
       type: 'flex',
@@ -206,8 +219,6 @@ async function sendCoursesFlexInChunks(replyToken, courses) {
         contents: chunks[i].map(createFlexCard)
       }
     };
-    // สำหรับข้อความแรก ใช้ replyToken แต่ข้อความถัดไปต้องใช้ push API
-    // แต่เพื่อความง่าย จะใช้ replyMessage กับ token เดิม ซึ่ง LINE อนุญาตให้ทำได้ภายในเวลาสั้นๆ
     await replyMessage(replyToken, message);
     if (i < chunks.length - 1) await delay(1000); // ป้องกัน rate-limit ของ LINE API
   }
@@ -289,6 +300,81 @@ function createFlexCard(course) {
 
   return card;
 }
+
+// ******** NEW FUNCTION: สร้างและส่ง Flex Message สำหรับรีวิว ********
+async function sendReviewFlex(replyToken) {
+  const reviewMessage = {
+    type: 'flex',
+    altText: 'วิดีโอรีวิวจากลูกค้า',
+    contents: {
+      type: 'bubble',
+      hero: {
+        type: 'image',
+        // **สำคัญ:** เปลี่ยนเป็น URL รูปภาพตัวอย่างของวิดีโอของคุณ
+        url: 'https://placehold.co/600x400/E98074/FFFFFF?text=รีวิวจากลูกค้า',
+        size: 'full',
+        aspectRatio: '20:13',
+        aspectMode: 'cover',
+        action: {
+          type: 'uri',
+          // **สำคัญ:** เปลี่ยนเป็น URL ของวิดีโอ TikTok ของคุณ
+          uri: 'https://www.tiktok.com/@yourusername/video/yourvideoid'
+        }
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: 'รีวิวจากลูกค้า',
+            weight: 'bold',
+            size: 'xl'
+          },
+          {
+            type: 'text',
+            text: 'ดูวิดีโอการทำขนมและบรรยากาศในคลาสเรียนของเราได้เลย!',
+            wrap: true,
+            margin: 'md'
+          }
+        ]
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          {
+            type: 'button',
+            style: 'primary',
+            height: 'sm',
+            color: '#000000', // สีดำเหมือน TikTok
+            action: {
+              type: 'uri',
+              label: '🎬 ดูวิดีโอรีวิว',
+              // **สำคัญ:** เปลี่ยนเป็น URL ของวิดีโอ TikTok ของคุณ
+              uri: 'https://vt.tiktok.com/ZSBCm9jRb/'
+            }
+          },
+          {
+            type: 'button',
+            style: 'secondary',
+            height: 'sm',
+            action: {
+              type: 'uri',
+              label: 'ไปที่โปรไฟล์ TikTok',
+              // **สำคัญ:** เปลี่ยนเป็น URL โปรไฟล์ TikTok ของคุณ
+              uri: 'https://www.tiktok.com/@namtarn.bakingstudio?_t=ZS-8xxLoOIwQYT&_r=1'
+            }
+          }
+        ],
+        flex: 0
+      }
+    }
+  };
+  return replyMessage(replyToken, reviewMessage);
+}
+
 
 // ฟังก์ชันส่งข้อความแบบ reply
 function replyMessage(replyToken, message) {

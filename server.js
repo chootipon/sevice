@@ -329,14 +329,6 @@ function sendTextWithQuickReply(replyToken, text) {
         {
           type: 'action',
           action: { type: 'message', label: 'ดูคอร์สทั้งหมด', text: 'ดูคอร์สทั้งหมด' }
-        },
-        {
-          type: 'action',
-          action: { type: 'message', label: 'หมวดหมู่ เบเกอรี่', text: 'หมวดหมู่ เบเกอรี่' }
-        },
-        {
-          type: 'action',
-          action: { type: 'message', label: 'หมวดหมู่ เค้ก', text: 'หมวดหมู่ เค้ก' }
         }
       ]
     }

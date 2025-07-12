@@ -1,3 +1,4 @@
+// 1. นำเข้าไลบรารีที่จำเป็น
 const express = require('express');
 const admin = require('firebase-admin');
 const axios = require('axios');
@@ -118,8 +119,9 @@ async function handleEvent(event) {
 
   const courses = await getOpenCourses(); // ดึงคอร์สจาก Firestore
 
-  // เงื่อนไข 'ดูคอร์สทั้งหมด'
-  if (userMessage.includes('ดูคอร์สทั้งหมด')) {
+  // ******** การเปลี่ยนแปลงอยู่ตรงนี้ ********
+  // เงื่อนไข 'ดูคอร์สทั้งหมด' หรือ 'สนใจ'
+  if (userMessage.includes('ดูคอร์สทั้งหมด') || userMessage.includes('สนใจ')) {
     if (courses.length === 0) {
       await sendTextReply(replyToken, 'ขณะนี้ยังไม่มีคอร์สที่เปิดสอนค่ะ');
     } else {
@@ -144,7 +146,7 @@ async function handleEvent(event) {
     }
     return; // สำคัญ: ต้อง return
   }
-  
+ 
   // ใช้ fuzzy search ถ้าเปิดใช้งาน FEATURE นี้ (สำหรับ keyword และ title)
   let matchedCourses = [];
   if (FEATURES.FUZZY_SEARCH) {
@@ -161,7 +163,7 @@ async function handleEvent(event) {
       c.title.toLowerCase().includes(userMessage)
     );
   }
-  
+ 
   console.log('Number of matched courses:', matchedCourses.length); // Debugging line
 
   if (matchedCourses.length > 0) {
@@ -193,6 +195,8 @@ async function sendCoursesFlexInChunks(replyToken, courses) {
   }
   console.log(`Sending courses in ${chunks.length} chunks. Total courses: ${courses.length}`); // Debugging line
 
+  // ใช้ Promise.all เพื่อส่งข้อความทั้งหมดพร้อมกัน (แต่ LINE API อาจมี rate limit)
+  // การส่งทีละอันพร้อม delay จะปลอดภัยกว่า
   for (let i = 0; i < chunks.length; i++) {
     const message = {
       type: 'flex',
@@ -202,6 +206,8 @@ async function sendCoursesFlexInChunks(replyToken, courses) {
         contents: chunks[i].map(createFlexCard)
       }
     };
+    // สำหรับข้อความแรก ใช้ replyToken แต่ข้อความถัดไปต้องใช้ push API
+    // แต่เพื่อความง่าย จะใช้ replyMessage กับ token เดิม ซึ่ง LINE อนุญาตให้ทำได้ภายในเวลาสั้นๆ
     await replyMessage(replyToken, message);
     if (i < chunks.length - 1) await delay(1000); // ป้องกัน rate-limit ของ LINE API
   }

@@ -311,14 +311,14 @@ async function sendReviewFlex(replyToken) {
       hero: {
         type: 'image',
         // **สำคัญ:** เปลี่ยนเป็น URL รูปภาพตัวอย่างของวิดีโอของคุณ
-        url: 'https://placehold.co/600x400/E98074/FFFFFF?text=รีวิวจากลูกค้า',
+        url: 'https://i.postimg.cc/W4kMZcB6/Screenshot-2025-07-12-113404.png',
         size: 'full',
         aspectRatio: '20:13',
         aspectMode: 'cover',
         action: {
           type: 'uri',
           // **สำคัญ:** เปลี่ยนเป็น URL ของวิดีโอ TikTok ของคุณ
-          uri: 'https://www.tiktok.com/@yourusername/video/yourvideoid'
+          uri: 'https://vt.tiktok.com/ZSBCm9jRb/'
         }
       },
       body: {
